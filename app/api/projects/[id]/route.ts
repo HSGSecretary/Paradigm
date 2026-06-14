@@ -23,15 +23,15 @@ export async function PATCH(
       location_name        = COALESCE(${location_name ?? null}, location_name),
       address              = COALESCE(${address ?? null}, address),
       project_status       = COALESCE(${project_status ?? null}, project_status),
-      project_phase_dates  = ${project_phase_dates ?? null},
+      project_phase_dates  = COALESCE(${project_phase_dates ?? null}, project_phase_dates),
       invoice_status       = COALESCE(${invoice_status ?? null}, invoice_status),
-      invoice_phase_dates  = ${invoice_phase_dates ?? null},
-      invoice_number       = ${invoice_number ?? null},
-      notes                = ${notes ?? null},
-      order_description    = ${order_description ?? null},
-      hsg_reference        = ${hsg_reference ?? null},
+      invoice_phase_dates  = COALESCE(${invoice_phase_dates ?? null}, invoice_phase_dates),
+      invoice_number       = COALESCE(${invoice_number ?? null}, invoice_number),
+      notes                = COALESCE(${notes ?? null}, notes),
+      order_description    = COALESCE(${order_description ?? null}, order_description),
+      hsg_reference        = COALESCE(${hsg_reference ?? null}, hsg_reference),
       is_complete          = COALESCE(${is_complete ?? null}, is_complete),
-      photos               = ${photos ?? null},
+      photos               = COALESCE(${photos ?? null}, photos),
       updated_at           = NOW()
     WHERE id = ${params.id}
     RETURNING *
