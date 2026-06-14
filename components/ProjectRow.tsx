@@ -106,7 +106,7 @@ function PhaseSelector<T extends string>({
                   <div className="flex-1">
                     <span className={isPast && !isSelected ? 'line-through opacity-60' : ''}>{phase}</span>
                     {phaseDate && !isSelected && (
-                      <p className="text-xs font-mono opacity-60 mt-0.5" style={{textDecoration:'none'}}>{phaseDate}</p>
+                      <p className="text-xs font-mono mt-0.5 text-steel-400" style={{textDecoration:'none'}}>{phaseDate}</p>
                     )}
                   </div>
                   {isActive && !isSelected && <span className="ml-auto text-amber-500 flex-shrink-0">✓</span>}
@@ -277,9 +277,9 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               project_phase_dates: JSON.stringify(dates),
             })}
           />
-          {projectPhaseDates[project.project_status] && (
-            <p className="text-xs text-steel-500 mt-1 font-mono">{projectPhaseDates[project.project_status]}</p>
-          )}
+          <p className="text-xs text-steel-500 mt-1 font-mono">
+            {projectPhaseDates[project.project_status] || <span className="text-steel-700 italic">No date set</span>}
+          </p>
         </div>
 
         {/* Invoice Status */}
@@ -311,9 +311,9 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               ) : undefined
             }
           />
-          {invoicePhaseDates[project.invoice_status] && (
-            <p className="text-xs text-steel-500 mt-1 font-mono">{invoicePhaseDates[project.invoice_status]}</p>
-          )}
+          <p className="text-xs text-steel-500 mt-1 font-mono">
+            {invoicePhaseDates[project.invoice_status] || <span className="text-steel-700 italic">No date set</span>}
+          </p>
           {project.invoice_number && (
             <p className="text-xs text-steel-500 mt-0.5 font-mono">#{project.invoice_number}</p>
           )}
