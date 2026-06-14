@@ -46,14 +46,28 @@ function PhaseSelector<T extends string>({
   extraContent?: React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [localDate, setLocalDate] = useState('');
+  const [selectedPhase, setSelectedPhase] = useState<T | null>(null);
+  const [editingDate, setEditingDate] = useState('');
   const currentIndex = phases.indexOf(current);
 
   function handlePhaseClick(phase: T) {
     if (!isAdmin) return;
-    const today = new Date().toISOString().split('T')[0];
-    const newDates = { ...phaseDates, [phase]: localDate || today };
-    onSelect(phase, newDates);
+    // If clicking already-selected phase, deselect
+    if (selectedPhase === phase) {
+      setSelectedPhase(null);
+      setEditingDate('');
+      return;
+    }
+    setSelectedPhase(phase);
+    setEditingDate(phaseDates[phase] || '');
+  }
+
+  function savePhase() {
+    if (!selectedPhase) return;
+    const newDates = { ...phaseDates, [selectedPhase]: editingDate };
+    onSelect(selectedPhase, newDates);
+    setSelectedPhase(null);
+    setEditingDate('');
     setExpanded(false);
   }
 
@@ -75,48 +89,76 @@ function PhaseSelector<T extends string>({
             const isActive = phase === current;
             const isPast = i < currentIndex;
             const phaseDate = phaseDates[phase];
+            const isSelected = selectedPhase === phase;
             return (
-              <button
-                key={phase}
-                onClick={() => handlePhaseClick(phase)}
-                disabled={!isAdmin}
-                className={`w-full text-left px-3 py-2 text-xs flex items-start gap-2 transition-colors
-                  ${isActive ? 'bg-amber-500/20 text-amber-400 font-semibold'
-                    : isPast ? 'text-steel-500 bg-steel-800/50'
-                    : 'text-steel-300 hover:bg-steel-700'}
-                  ${!isAdmin ? 'cursor-default' : 'cursor-pointer'}`}
-              >
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-0.5 ${isActive ? 'bg-amber-500' : isPast ? 'bg-steel-600' : 'bg-steel-500'}`} />
-                <div className="flex-1">
-                  <span className={isPast ? 'line-through opacity-60' : ''}>{phase}</span>
-                  {phaseDate && (
-                    <p className="text-xs font-mono opacity-60 mt-0.5 no-underline" style={{textDecoration:'none'}}>{phaseDate}</p>
-                  )}
-                </div>
-                {isActive && <span className="ml-auto text-amber-500 flex-shrink-0">✓</span>}
-              </button>
+              <div key={phase}>
+                <button
+                  onClick={() => handlePhaseClick(phase)}
+                  disabled={!isAdmin}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-start gap-2 transition-colors
+                    ${isSelected ? 'bg-steel-600'
+                      : isActive ? 'bg-amber-500/20 text-amber-400 font-semibold'
+                      : isPast ? 'text-steel-500 bg-steel-800/50'
+                      : 'text-steel-300 hover:bg-steel-700'}
+                    ${!isAdmin ? 'cursor-default' : 'cursor-pointer'}`}
+                >
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-0.5 ${isActive ? 'bg-amber-500' : isPast ? 'bg-steel-600' : 'bg-steel-500'}`} />
+                  <div className="flex-1">
+                    <span className={isPast && !isSelected ? 'line-through opacity-60' : ''}>{phase}</span>
+                    {phaseDate && !isSelected && (
+                      <p className="text-xs font-mono opacity-60 mt-0.5" style={{textDecoration:'none'}}>{phaseDate}</p>
+                    )}
+                  </div>
+                  {isActive && !isSelected && <span className="ml-auto text-amber-500 flex-shrink-0">✓</span>}
+                </button>
+
+                {/* Inline date editor for selected phase */}
+                {isSelected && isAdmin && (
+                  <div className="px-3 pb-3 pt-1 bg-steel-800 border-t border-steel-600">
+                    <label className="block text-xs text-steel-400 mb-1">Set date for this phase</label>
+                    <input
+                      type="date"
+                      className="input-field text-xs py-1 mb-2"
+                      value={editingDate}
+                      onChange={e => setEditingDate(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); savePhase(); }}
+                        className="btn-primary text-xs py-1 px-3 flex-1"
+                      >
+                        Set as current phase
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); 
+                          // Save date only without changing current phase
+                          const newDates = { ...phaseDates, [phase]: editingDate };
+                          onSelect(current, newDates);
+                          setSelectedPhase(null);
+                          setEditingDate('');
+                        }}
+                        className="btn-secondary text-xs py-1 px-2"
+                      >
+                        Date only
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
 
-          {isAdmin && (
+          {isAdmin && extraContent && (
             <div className="border-t border-steel-700 p-3 space-y-2">
-              <div>
-                <label className="block text-xs text-steel-500 mb-1">Date for selected phase</label>
-                <input
-                  type="date"
-                  className="input-field text-xs py-1"
-                  value={localDate}
-                  onChange={e => setLocalDate(e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                />
-              </div>
               {extraContent}
             </div>
           )}
 
           {!isAdmin && (
             <div className="border-t border-steel-700 px-3 py-2 text-xs text-steel-500">
-              Click a phase to view its date
+              Contact your account manager to update status.
             </div>
           )}
         </div>
