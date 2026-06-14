@@ -62,9 +62,16 @@ export default function DashboardClient({ role }: Props) {
 
   const filtered = projects
     .filter(p =>
-    p.location_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.address.toLowerCase().includes(search.toLowerCase())
-  );
+      p.location_name.toLowerCase().includes(search.toLowerCase()) ||
+      p.address.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Always put complete at bottom
+      if (a.is_complete !== b.is_complete) return a.is_complete ? 1 : -1;
+      if (sortBy === 'location') return a.location_name.localeCompare(b.location_name);
+      if (sortBy === 'status') return a.project_status.localeCompare(b.project_status);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   return (
     <div className="min-h-screen">
