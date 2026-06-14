@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const blob = await put(
       `projects/${projectId}/${Date.now()}-${file.name}`,
       file,
-      { access: 'public', token }
+      { access: 'private', token }
     );
     return NextResponse.json({ url: blob.url });
   } catch (error: any) {
