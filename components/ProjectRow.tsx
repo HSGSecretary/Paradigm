@@ -417,10 +417,10 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
                     {photos.map((url, i) => (
                       <div key={url} className="relative group">
                         {/* Thumbnail */}
-                        <a href={url} target="_blank" rel="noopener noreferrer" title="Click to view full size">
+                        <a href={`/api/photo?url=${encodeURIComponent(url)}`} target="_blank" rel="noopener noreferrer" title="Click to view full size">
                           <div className="aspect-square overflow-hidden rounded border border-steel-600 hover:border-amber-500 transition-colors">
                             <img
-                              src={url}
+                              src={`/api/photo?url=${encodeURIComponent(url)}`}
                               alt={`Completion photo ${i + 1}`}
                               className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                               onError={(e) => {

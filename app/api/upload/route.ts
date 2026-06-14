@@ -17,12 +17,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const blob = await put(`projects/${projectId}/${Date.now()}-${file.name}`, file, {
-      access: 'public',
-    });
+    const blob = await put(
+      `projects/${projectId}/${Date.now()}-${file.name}`,
+      file,
+      { access: 'public' }
+    );
     return NextResponse.json({ url: blob.url });
-  } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  } catch (error: any) {
+    console.error('Upload error:', error?.message || error);
+    return NextResponse.json({ error: error?.message || 'Upload failed' }, { status: 500 });
   }
 }
