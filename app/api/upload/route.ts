@@ -17,10 +17,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN || 'vercel_blob_rw_Hp9Muo0rb88uPQqF_iL80Wpoz7xOeHQUNYVLx8nsbp6D8sw';
     const blob = await put(
       `projects/${projectId}/${Date.now()}-${file.name}`,
       file,
-      { access: 'public' }
+      { access: 'public', token }
     );
     return NextResponse.json({ url: blob.url });
   } catch (error: any) {
