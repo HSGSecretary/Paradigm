@@ -13,6 +13,7 @@ export default function DashboardClient({ role }: Props) {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'location' | 'status'>('date');
   const isAdmin = role === 'admin';
 
   const fetchProjects = useCallback(async () => {
@@ -106,6 +107,15 @@ export default function DashboardClient({ role }: Props) {
           <span className="text-steel-400 text-sm">
             {filtered.length} {filtered.length === 1 ? 'project' : 'projects'}
           </span>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'date' | 'location' | 'status')}
+            className="input-field w-auto text-sm"
+          >
+            <option value="date">Sort: Newest</option>
+            <option value="location">Sort: Location A–Z</option>
+            <option value="status">Sort: Project Status</option>
+          </select>
           {isAdmin && (
             <button onClick={() => setShowAddModal(true)} className="btn-primary">
               + Add Project

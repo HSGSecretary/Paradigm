@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import sql from '@/lib/db';
 import { getSession } from '@/lib/auth';
 
 export async function GET() {
@@ -14,9 +14,9 @@ export async function GET() {
       location_name TEXT NOT NULL,
       address TEXT NOT NULL,
       project_status TEXT NOT NULL DEFAULT 'Pending',
-      project_status_date TEXT,
+      project_phase_dates TEXT,
       invoice_status TEXT NOT NULL DEFAULT 'No Invoice Issued',
-      invoice_status_date TEXT,
+      invoice_phase_dates TEXT,
       invoice_number TEXT,
       notes TEXT,
       order_description TEXT,
@@ -25,11 +25,12 @@ export async function GET() {
       photos TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
+    )
   `;
 
-  // Safe to run on existing tables
   const cols: [string, string][] = [
+    ['project_phase_dates', 'TEXT'],
+    ['invoice_phase_dates', 'TEXT'],
     ['invoice_number', 'TEXT'],
     ['order_description', 'TEXT'],
     ['hsg_reference', 'TEXT'],
@@ -37,9 +38,7 @@ export async function GET() {
     ['photos', 'TEXT'],
   ];
   for (const [col, type] of cols) {
-    try {
-      await sql.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS ${col} ${type}`);
-    } catch (_) {}
+    try { await sql.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS ${col} ${type}`); } catch (_) {}
   }
 
   return NextResponse.json({ ok: true, message: 'Database ready.' });

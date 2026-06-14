@@ -26,9 +26,9 @@ export interface Project {
   location_name: string;
   address: string;
   project_status: ProjectPhase;
-  project_status_date?: string;
+  project_phase_dates?: string; // JSON: { [phase]: date }
   invoice_status: InvoicePhase;
-  invoice_status_date?: string;
+  invoice_phase_dates?: string; // JSON: { [phase]: date }
   invoice_number?: string;
   notes?: string;
   order_description?: string;

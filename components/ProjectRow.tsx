@@ -31,7 +31,7 @@ function invoicePhaseColor(phase: InvoicePhase): string {
 function PhaseSelector<T extends string>({
   phases,
   current,
-  currentDate,
+  phaseDates,
   colorFn,
   isAdmin,
   onSelect,
@@ -39,15 +39,23 @@ function PhaseSelector<T extends string>({
 }: {
   phases: readonly T[];
   current: T;
-  currentDate?: string;
+  phaseDates: Record<string, string>;
   colorFn: (p: T) => string;
   isAdmin: boolean;
-  onSelect: (phase: T, date: string) => void;
+  onSelect: (phase: T, dates: Record<string, string>) => void;
   extraContent?: React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [localDate, setLocalDate] = useState(currentDate || '');
+  const [localDate, setLocalDate] = useState('');
   const currentIndex = phases.indexOf(current);
+
+  function handlePhaseClick(phase: T) {
+    if (!isAdmin) return;
+    const today = new Date().toISOString().split('T')[0];
+    const newDates = { ...phaseDates, [phase]: localDate || today };
+    onSelect(phase, newDates);
+    setExpanded(false);
+  }
 
   return (
     <div>
@@ -66,20 +74,26 @@ function PhaseSelector<T extends string>({
           {phases.map((phase, i) => {
             const isActive = phase === current;
             const isPast = i < currentIndex;
+            const phaseDate = phaseDates[phase];
             return (
               <button
                 key={phase}
-                onClick={() => { if (isAdmin) { onSelect(phase, localDate); setExpanded(false); } }}
+                onClick={() => handlePhaseClick(phase)}
                 disabled={!isAdmin}
-                className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors
+                className={`w-full text-left px-3 py-2 text-xs flex items-start gap-2 transition-colors
                   ${isActive ? 'bg-amber-500/20 text-amber-400 font-semibold'
                     : isPast ? 'text-steel-500 bg-steel-800/50'
                     : 'text-steel-300 hover:bg-steel-700'}
                   ${!isAdmin ? 'cursor-default' : 'cursor-pointer'}`}
               >
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-amber-500' : isPast ? 'bg-steel-600' : 'bg-steel-500'}`} />
-                <span>{phase}</span>
-                {isActive && <span className="ml-auto text-amber-500">✓</span>}
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-0.5 ${isActive ? 'bg-amber-500' : isPast ? 'bg-steel-600' : 'bg-steel-500'}`} />
+                <div className="flex-1">
+                  <span className={isPast ? 'line-through opacity-60' : ''}>{phase}</span>
+                  {phaseDate && (
+                    <p className="text-xs font-mono opacity-60 mt-0.5 no-underline" style={{textDecoration:'none'}}>{phaseDate}</p>
+                  )}
+                </div>
+                {isActive && <span className="ml-auto text-amber-500 flex-shrink-0">✓</span>}
               </button>
             );
           })}
@@ -87,21 +101,23 @@ function PhaseSelector<T extends string>({
           {isAdmin && (
             <div className="border-t border-steel-700 p-3 space-y-2">
               <div>
-                <label className="block text-xs text-steel-500 mb-1">Date</label>
-                <input type="date" className="input-field text-xs py-1" value={localDate} onChange={e => setLocalDate(e.target.value)} />
+                <label className="block text-xs text-steel-500 mb-1">Date for selected phase</label>
+                <input
+                  type="date"
+                  className="input-field text-xs py-1"
+                  value={localDate}
+                  onChange={e => setLocalDate(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                />
               </div>
               {extraContent}
-              <button
-                onClick={() => { onSelect(current, localDate); setExpanded(false); }}
-                className="btn-primary w-full text-center text-xs py-1.5"
-              >
-                Save
-              </button>
             </div>
           )}
 
-          {!isAdmin && currentDate && (
-            <div className="border-t border-steel-700 px-3 py-2 text-xs text-steel-500">Date: {currentDate}</div>
+          {!isAdmin && (
+            <div className="border-t border-steel-700 px-3 py-2 text-xs text-steel-500">
+              Click a phase to view its date
+            </div>
           )}
         </div>
       )}
@@ -123,6 +139,8 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
   const [hsgReference, setHsgReference] = useState(project.hsg_reference || '');
   const [invoiceNumber, setInvoiceNumber] = useState(project.invoice_number || '');
 
+  const projectPhaseDates: Record<string, string> = project.project_phase_dates ? JSON.parse(project.project_phase_dates) : {};
+  const invoicePhaseDates: Record<string, string> = project.invoice_phase_dates ? JSON.parse(project.invoice_phase_dates) : {};
   const photos: string[] = project.photos ? JSON.parse(project.photos) : [];
 
   async function saveDetails() {
@@ -181,10 +199,9 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
 
   return (
     <div className={`card transition-all duration-200 ${project.is_complete ? 'opacity-50' : ''} ${detailOpen ? 'border-steel-500' : 'hover:border-steel-600'}`}>
-      {/* Main row */}
       <div className="grid grid-cols-12 gap-4 items-start px-4 py-3">
 
-        {/* Location Name — click to expand */}
+        {/* Location Name */}
         <div className="col-span-2">
           <button onClick={() => setDetailOpen(!detailOpen)} className="text-left group w-full">
             <p className={`font-medium text-sm transition-colors flex items-center gap-1.5 ${project.is_complete ? 'text-steel-500 line-through' : 'text-amber-400 hover:text-amber-300'}`}>
@@ -197,9 +214,7 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               <p className="text-xs text-steel-600 mt-0.5 pl-4">details on file</p>
             )}
           </button>
-          {project.is_complete && (
-            <span className="ml-4 text-xs text-green-600 font-mono">COMPLETE</span>
-          )}
+          {project.is_complete && <span className="text-xs text-green-600 font-mono ml-4">COMPLETE</span>}
         </div>
 
         {/* Address */}
@@ -212,13 +227,16 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
           <PhaseSelector
             phases={PROJECT_PHASES}
             current={project.project_status as ProjectPhase}
-            currentDate={project.project_status_date}
+            phaseDates={projectPhaseDates}
             colorFn={projectPhaseColor}
             isAdmin={isAdmin}
-            onSelect={(phase, date) => onUpdate(project.id, { project_status: phase, project_status_date: date || undefined })}
+            onSelect={(phase, dates) => onUpdate(project.id, {
+              project_status: phase,
+              project_phase_dates: JSON.stringify(dates),
+            })}
           />
-          {project.project_status_date && (
-            <p className="text-xs text-steel-500 mt-1 font-mono">{project.project_status_date}</p>
+          {projectPhaseDates[project.project_status] && (
+            <p className="text-xs text-steel-500 mt-1 font-mono">{projectPhaseDates[project.project_status]}</p>
           )}
         </div>
 
@@ -227,10 +245,14 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
           <PhaseSelector
             phases={INVOICE_PHASES}
             current={project.invoice_status as InvoicePhase}
-            currentDate={project.invoice_status_date}
+            phaseDates={invoicePhaseDates}
             colorFn={invoicePhaseColor}
             isAdmin={isAdmin}
-            onSelect={(phase, date) => onUpdate(project.id, { invoice_status: phase, invoice_status_date: date || undefined, invoice_number: invoiceNumber })}
+            onSelect={(phase, dates) => onUpdate(project.id, {
+              invoice_status: phase,
+              invoice_phase_dates: JSON.stringify(dates),
+              invoice_number: invoiceNumber,
+            })}
             extraContent={
               isAdmin ? (
                 <div>
@@ -247,8 +269,8 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               ) : undefined
             }
           />
-          {project.invoice_status_date && (
-            <p className="text-xs text-steel-500 mt-1 font-mono">{project.invoice_status_date}</p>
+          {invoicePhaseDates[project.invoice_status] && (
+            <p className="text-xs text-steel-500 mt-1 font-mono">{invoicePhaseDates[project.invoice_status]}</p>
           )}
           {project.invoice_number && (
             <p className="text-xs text-steel-500 mt-0.5 font-mono">#{project.invoice_number}</p>
@@ -294,7 +316,7 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-steel-500 uppercase tracking-widest mb-1.5">Order Description</label>
-                  <textarea className="input-field resize-none" rows={3} placeholder="Describe the sign order…" value={orderDescription} onChange={e => setOrderDescription(e.target.value)} />
+                  <textarea className="input-field resize-none" rows={3} value={orderDescription} onChange={e => setOrderDescription(e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-steel-500 uppercase tracking-widest mb-1.5">HSG Reference</label>
@@ -314,11 +336,8 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-widest">Project Details</h3>
-                {isAdmin && (
-                  <button onClick={() => setEditingDetails(true)} className="btn-secondary text-xs py-1 px-3">Edit details</button>
-                )}
+                {isAdmin && <button onClick={() => setEditingDetails(true)} className="btn-secondary text-xs py-1 px-3">Edit details</button>}
               </div>
-
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4">
                 <div>
                   <p className="text-xs font-medium text-steel-500 uppercase tracking-widest mb-1">Address</p>
@@ -333,59 +352,34 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
                   <p className="text-sm text-steel-200 font-mono">{project.hsg_reference || <span className="text-steel-600 italic normal-case font-sans">—</span>}</p>
                 </div>
               </div>
-
               {project.notes && (
                 <div className="pt-1 border-t border-steel-700/50">
                   <p className="text-xs font-medium text-steel-500 uppercase tracking-widest mb-1">Notes</p>
                   <p className="text-sm text-steel-300 leading-relaxed">{project.notes}</p>
                 </div>
               )}
-
-              {/* Photos section */}
               <div className="pt-1 border-t border-steel-700/50">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-medium text-steel-500 uppercase tracking-widest">Completion Photos</p>
                   {isAdmin && (
                     <label className="btn-secondary text-xs py-1 px-3 cursor-pointer">
                       {uploading ? 'Uploading…' : '+ Add Photos'}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handlePhotoUpload}
-                        disabled={uploading}
-                      />
+                      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
                     </label>
                   )}
                 </div>
-
                 {photos.length === 0 ? (
                   <p className="text-xs text-steel-600 italic">No photos uploaded yet.</p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                     {photos.map((url, i) => (
                       <div key={url} className="relative group aspect-square">
-                        <img
-                          src={url}
-                          alt={`Completion photo ${i + 1}`}
-                          className="w-full h-full object-cover rounded border border-steel-600"
-                        />
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded flex items-center justify-center"
-                        >
+                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover rounded border border-steel-600" />
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded flex items-center justify-center">
                           <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium">View</span>
                         </a>
                         {isAdmin && (
-                          <button
-                            onClick={() => removePhoto(url)}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-900 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                            title="Remove photo"
-                          >×</button>
+                          <button onClick={() => removePhoto(url)} className="absolute top-1 right-1 w-5 h-5 bg-red-900 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">×</button>
                         )}
                       </div>
                     ))}
