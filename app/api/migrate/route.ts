@@ -28,18 +28,12 @@ export async function GET() {
     )
   `;
 
-  const cols: [string, string][] = [
-    ['project_phase_dates', 'TEXT'],
-    ['invoice_phase_dates', 'TEXT'],
-    ['invoice_number', 'TEXT'],
-    ['order_description', 'TEXT'],
-    ['hsg_reference', 'TEXT'],
-    ['is_complete', 'BOOLEAN NOT NULL DEFAULT FALSE'],
-    ['photos', 'TEXT'],
-  ];
-  for (const [col, type] of cols) {
-    try { await sql.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS ${col} ${type}`); } catch (_) {}
-  }
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_phase_dates TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS invoice_phase_dates TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS invoice_number TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS order_description TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS hsg_reference TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS photos TEXT`; } catch (_) {}
 
   return NextResponse.json({ ok: true, message: 'Database ready.' });
 }
