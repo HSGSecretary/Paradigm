@@ -16,9 +16,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing file or projectId' }, { status: 400 });
   }
 
-  const blob = await put(`projects/${projectId}/${Date.now()}-${file.name}`, file, {
-    access: 'public',
-  });
-
-  return NextResponse.json({ url: blob.url });
+  try {
+    const blob = await put(`projects/${projectId}/${Date.now()}-${file.name}`, file, {
+      access: 'public',
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }

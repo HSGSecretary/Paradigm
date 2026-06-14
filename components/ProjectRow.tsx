@@ -413,15 +413,29 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
                 {photos.length === 0 ? (
                   <p className="text-xs text-steel-600 italic">No photos uploaded yet.</p>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                     {photos.map((url, i) => (
-                      <div key={url} className="relative group aspect-square">
-                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover rounded border border-steel-600" />
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded flex items-center justify-center">
-                          <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium">View</span>
+                      <div key={url} className="relative group">
+                        {/* Thumbnail */}
+                        <a href={url} target="_blank" rel="noopener noreferrer" title="Click to view full size">
+                          <div className="aspect-square overflow-hidden rounded border border-steel-600 hover:border-amber-500 transition-colors">
+                            <img
+                              src={url}
+                              alt={`Completion photo ${i + 1}`}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-steel-600 text-center mt-1">Photo {i + 1}</p>
                         </a>
                         {isAdmin && (
-                          <button onClick={() => removePhoto(url)} className="absolute top-1 right-1 w-5 h-5 bg-red-900 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">×</button>
+                          <button
+                            onClick={() => removePhoto(url)}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-900 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center font-bold"
+                            title="Remove photo"
+                          >×</button>
                         )}
                       </div>
                     ))}
