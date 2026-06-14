@@ -7,7 +7,7 @@ export const PROJECT_PHASES = [
   'Manufacturing',
   'Shipping',
   'Pending Installation',
-  'Final Balance',
+  'Install Complete',
 ] as const;
 
 export const INVOICE_PHASES = [
