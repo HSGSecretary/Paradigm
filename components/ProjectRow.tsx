@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { upload } from '@vercel/blob/client';
 import { PROJECT_PHASES, INVOICE_PHASES, type Project, type ProjectPhase, type InvoicePhase } from '@/lib/constants';
 
 interface Props {
@@ -212,25 +213,31 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
     if (!files || files.length === 0) return;
     setUploading(true);
     const newUrls: string[] = [];
-    for (const file of Array.from(files)) {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('projectId', String(project.id));
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-      if (res.ok) {
-        const { url } = await res.json();
-        newUrls.push(url);
+    try {
+      for (const file of Array.from(files)) {
+        // Upload straight from the browser to Vercel Blob — no 4.5 MB limit.
+        const blob = await upload(`projects/${project.id}/${file.name}`, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          clientPayload: JSON.stringify({ projectId: project.id }),
+        });
+        newUrls.push(blob.url);
       }
+      const updated = [...photos, ...newUrls];
+      await onUpdate(project.id, { photos: JSON.stringify(updated) });
+    } catch (err: any) {
+      alert(`Photo upload failed: ${err?.message || 'unknown error'}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-    const updated = [...photos, ...newUrls];
-    await onUpdate(project.id, { photos: JSON.stringify(updated) });
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function removePhoto(url: string) {
     const updated = photos.filter(p => p !== url);
     await onUpdate(project.id, { photos: JSON.stringify(updated) });
+    // Best-effort: delete the underlying blob so storage doesn't accumulate orphans.
+    fetch(`/api/photo?url=${encodeURIComponent(url)}`, { method: 'DELETE' }).catch(() => {});
   }
 
   async function toggleComplete() {
@@ -417,10 +424,10 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
                     {photos.map((url, i) => (
                       <div key={url} className="relative group">
                         {/* Thumbnail */}
-                        <a href={`/api/photo?url=${encodeURIComponent(url)}`} target="_blank" rel="noopener noreferrer" title="Click to view full size">
+                        <a href={url} target="_blank" rel="noopener noreferrer" title="Click to view full size">
                           <div className="aspect-square overflow-hidden rounded border border-steel-600 hover:border-amber-500 transition-colors">
                             <img
-                              src={`/api/photo?url=${encodeURIComponent(url)}`}
+                              src={url}
                               alt={`Completion photo ${i + 1}`}
                               className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                               onError={(e) => {

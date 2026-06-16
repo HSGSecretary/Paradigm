@@ -1,31 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 
-export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session || session.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const formData = await req.formData();
-  const file = formData.get('file') as File;
-  const projectId = formData.get('projectId') as string;
-
-  if (!file || !projectId) {
-    return NextResponse.json({ error: 'Missing file or projectId' }, { status: 400 });
-  }
+// Client-upload token route.
+// The browser uploads the file DIRECTLY to Vercel Blob (bypassing the 4.5 MB
+// serverless body limit); this route only verifies the user and signs the upload.
+export async function POST(request: Request): Promise<NextResponse> {
+  const body = (await request.json()) as HandleUploadBody;
 
   try {
-    const token = process.env.BLOB_READ_WRITE_TOKEN || 'vercel_blob_rw_Hp9Muo0rb88uPQqF_iL80Wpoz7xOeHQUNYVLx8nsbp6D8sw';
-    const blob = await put(
-      `projects/${projectId}/${Date.now()}-${file.name}`,
-      file,
-      { token } as any
-    );
-    return NextResponse.json({ url: blob.url });
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        // Only an authenticated admin may upload.
+        const session = await getSession();
+        if (!session || session.role !== 'admin') {
+          throw new Error('Forbidden');
+        }
+        return {
+          access: 'public',
+          addRandomSuffix: true,
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'],
+          maximumSizeInBytes: 25 * 1024 * 1024, // 25 MB per photo
+        };
+      },
+      onUploadCompleted: async () => {
+        // The browser saves the returned URL to the project record itself,
+        // so nothing is required here.
+      },
+    });
+
+    return NextResponse.json(jsonResponse);
   } catch (error: any) {
-    console.error('Upload error:', error?.message || error);
-    return NextResponse.json({ error: error?.message || 'Upload failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Upload failed' },
+      { status: 400 },
+    );
   }
 }
