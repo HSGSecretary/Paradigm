@@ -21,6 +21,13 @@ export const INVOICE_PHASES = [
 export type ProjectPhase = typeof PROJECT_PHASES[number];
 export type InvoicePhase = typeof INVOICE_PHASES[number];
 
+export interface ProjectComment {
+  id: string;
+  role: 'admin' | 'viewer';
+  text: string;
+  created_at: string;
+}
+
 export interface Project {
   id: number;
   location_name: string;
@@ -35,6 +42,9 @@ export interface Project {
   hsg_reference?: string;
   is_complete: boolean;
   photos?: string; // JSON array of URLs
+  comments?: string; // JSON array of ProjectComment
+  admin_notify?: boolean; // unseen change for the admin (raised by viewer activity)
+  viewer_notify?: boolean; // unseen change for the viewer (raised by admin activity)
   created_at: string;
   updated_at: string;
 }

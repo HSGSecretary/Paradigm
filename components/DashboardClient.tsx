@@ -60,6 +60,26 @@ export default function DashboardClient({ role }: Props) {
     if (res.ok) setProjects(prev => prev.filter(p => p.id !== id));
   }
 
+  async function handleAddComment(id: number, text: string) {
+    const res = await fetch(`/api/projects/${id}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    }
+  }
+
+  async function handleDismiss(id: number) {
+    const res = await fetch(`/api/projects/${id}/dismiss`, { method: 'POST' });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    }
+  }
+
   const filtered = projects
     .filter(p =>
       p.location_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -72,6 +92,8 @@ export default function DashboardClient({ role }: Props) {
       if (sortBy === 'status') return a.project_status.localeCompare(b.project_status);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
+
+  const myUpdateCount = projects.filter(p => (isAdmin ? p.admin_notify : p.viewer_notify)).length;
 
   return (
     <div className="min-h-screen">
@@ -87,6 +109,15 @@ export default function DashboardClient({ role }: Props) {
           </div>
 
           <div className="flex items-center gap-3">
+            {myUpdateCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-amber-500/20 text-amber-400"
+                title={`${myUpdateCount} ${myUpdateCount === 1 ? 'project has' : 'projects have'} updates`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {myUpdateCount} {myUpdateCount === 1 ? 'update' : 'updates'}
+              </span>
+            )}
             <span className={`text-xs font-mono px-2 py-1 rounded ${
               isAdmin ? 'bg-amber-500/20 text-amber-400' : 'bg-steel-700 text-steel-400'
             }`}>
@@ -173,6 +204,8 @@ export default function DashboardClient({ role }: Props) {
                     isAdmin={isAdmin}
                     onUpdate={handleUpdate}
                     onDelete={handleDelete}
+                    onAddComment={handleAddComment}
+                    onDismiss={handleDismiss}
                   />
                 </div>
               );

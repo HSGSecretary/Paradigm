@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
   const { location_name, address, notes } = body;
 
   const rows = await sql`
-    INSERT INTO projects (location_name, address, notes)
-    VALUES (${location_name}, ${address}, ${notes})
+    INSERT INTO projects (location_name, address, notes, viewer_notify)
+    VALUES (${location_name}, ${address}, ${notes}, TRUE)
     RETURNING *
   `;
   return NextResponse.json(rows[0], { status: 201 });

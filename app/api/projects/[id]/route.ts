@@ -32,6 +32,7 @@ export async function PATCH(
       hsg_reference        = COALESCE(${hsg_reference ?? null}, hsg_reference),
       is_complete          = COALESCE(${is_complete ?? null}, is_complete),
       photos               = COALESCE(${photos ?? null}, photos),
+      viewer_notify        = TRUE,
       updated_at           = NOW()
     WHERE id = ${params.id}
     RETURNING *

@@ -2,13 +2,15 @@
 
 import { useState, useRef } from 'react';
 import { upload } from '@vercel/blob/client';
-import { PROJECT_PHASES, INVOICE_PHASES, type Project, type ProjectPhase, type InvoicePhase } from '@/lib/constants';
+import { PROJECT_PHASES, INVOICE_PHASES, type Project, type ProjectPhase, type InvoicePhase, type ProjectComment } from '@/lib/constants';
 
 interface Props {
   project: Project;
   isAdmin: boolean;
   onUpdate: (id: number, updates: Partial<Project>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onAddComment: (id: number, text: string) => Promise<void>;
+  onDismiss: (id: number) => Promise<void>;
 }
 
 function projectPhaseColor(phase: ProjectPhase): string {
@@ -168,11 +170,13 @@ function PhaseSelector<T extends string>({
   );
 }
 
-export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Props) {
+export default function ProjectRow({ project, isAdmin, onUpdate, onDelete, onAddComment, onDismiss }: Props) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [locationName, setLocationName] = useState(project.location_name);
@@ -185,6 +189,29 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
   const projectPhaseDates: Record<string, string> = project.project_phase_dates ? JSON.parse(project.project_phase_dates) : {};
   const invoicePhaseDates: Record<string, string> = project.invoice_phase_dates ? JSON.parse(project.invoice_phase_dates) : {};
   const photos: string[] = project.photos ? JSON.parse(project.photos) : [];
+  const comments: ProjectComment[] = project.comments ? JSON.parse(project.comments) : [];
+
+  // The badge the current role sees: admins see changes raised by the viewer,
+  // viewers see changes raised by the admin. Each side dismisses only its own.
+  const hasNotification = isAdmin ? !!project.admin_notify : !!project.viewer_notify;
+
+  function formatCommentDate(iso: string): string {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  async function postComment() {
+    const text = commentText.trim();
+    if (!text || postingComment) return;
+    setPostingComment(true);
+    try {
+      await onAddComment(project.id, text);
+      setCommentText('');
+    } finally {
+      setPostingComment(false);
+    }
+  }
 
   async function saveDetails() {
     setSaving(true);
@@ -263,6 +290,21 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
               <p className="text-xs text-steel-600 mt-0.5 pl-4">details on file</p>
             )}
           </button>
+          {hasNotification && (
+            <div className="flex items-center gap-1.5 mt-1 pl-4">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Updated
+              </span>
+              <button
+                onClick={() => onDismiss(project.id)}
+                className="text-[10px] text-steel-500 hover:text-steel-300 underline underline-offset-2"
+                title="Dismiss this notification (only for your side)"
+              >
+                dismiss
+              </button>
+            </div>
+          )}
           {project.is_complete && <span className="text-xs text-green-600 font-mono ml-4">COMPLETE</span>}
         </div>
 
@@ -448,6 +490,50 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete }: Pro
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Comments */}
+              <div className="pt-1 border-t border-steel-700/50">
+                <p className="text-xs font-medium text-steel-500 uppercase tracking-widest mb-3">Comments</p>
+                {comments.length === 0 ? (
+                  <p className="text-xs text-steel-600 italic mb-3">No comments yet.</p>
+                ) : (
+                  <div className="space-y-3 mb-3">
+                    {comments.map(c => (
+                      <div key={c.id} className="text-sm">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${c.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-steel-700 text-steel-300'}`}>
+                            {c.role === 'admin' ? 'Admin' : 'Viewer'}
+                          </span>
+                          <span className="text-xs text-steel-600 font-mono">{formatCommentDate(c.created_at)}</span>
+                        </div>
+                        <p className="text-steel-200 whitespace-pre-wrap leading-relaxed pl-0.5">{c.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    className="input-field resize-none text-sm flex-1"
+                    rows={2}
+                    placeholder="Add a comment…"
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    onKeyDown={e => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') postComment();
+                    }}
+                  />
+                  <button
+                    onClick={postComment}
+                    disabled={postingComment || !commentText.trim()}
+                    className="btn-primary text-xs py-2 px-4 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {postingComment ? 'Posting…' : 'Post'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-steel-600 mt-1.5">
+                  Posting notifies the {isAdmin ? 'viewer' : 'Paradigm team'}. ⌘/Ctrl + Enter to send.
+                </p>
               </div>
             </div>
           )}

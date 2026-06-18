@@ -23,6 +23,9 @@ export async function GET() {
       hsg_reference TEXT,
       is_complete BOOLEAN NOT NULL DEFAULT FALSE,
       photos TEXT,
+      comments TEXT,
+      admin_notify BOOLEAN NOT NULL DEFAULT FALSE,
+      viewer_notify BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
@@ -34,6 +37,9 @@ export async function GET() {
   try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS order_description TEXT`; } catch (_) {}
   try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS hsg_reference TEXT`; } catch (_) {}
   try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS photos TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS comments TEXT`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS admin_notify BOOLEAN NOT NULL DEFAULT FALSE`; } catch (_) {}
+  try { await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS viewer_notify BOOLEAN NOT NULL DEFAULT FALSE`; } catch (_) {}
 
   return NextResponse.json({ ok: true, message: 'Database ready.' });
 }
