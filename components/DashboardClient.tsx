@@ -101,11 +101,8 @@ export default function DashboardClient({ role }: Props) {
       <header className="border-b border-steel-700 bg-steel-900 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-amber-500 rounded rotate-12 flex-shrink-0" />
-            <span className="text-lg font-semibold tracking-tight">
-              Paradigm <span className="text-amber-500">OH</span>
-            </span>
-            <span className="hidden sm:inline text-steel-600 text-sm ml-2">/ Project Dashboard</span>
+            <img src="/paradigm-logo.png" alt="Paradigm Oral Health" className="h-8 w-auto" />
+            <span className="hidden sm:inline text-steel-600 text-sm ml-1">/ Project Dashboard</span>
           </div>
 
           <div className="flex items-center gap-3">
