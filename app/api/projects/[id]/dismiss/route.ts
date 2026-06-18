@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { ensureSchema } from '@/lib/schema';
 import { getSession } from '@/lib/auth';
 
 // Dismiss the notification for the CURRENT role only. An admin dismissing does
@@ -11,6 +12,7 @@ export async function POST(
 ) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  await ensureSchema();
 
   const clearAdmin = session.role === 'admin';
   const clearViewer = session.role === 'viewer';

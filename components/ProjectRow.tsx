@@ -10,6 +10,8 @@ interface Props {
   onUpdate: (id: number, updates: Partial<Project>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onAddComment: (id: number, text: string) => Promise<void>;
+  onEditComment: (id: number, commentId: string, text: string) => Promise<void>;
+  onDeleteComment: (id: number, commentId: string) => Promise<void>;
   onDismiss: (id: number) => Promise<void>;
 }
 
@@ -170,14 +172,18 @@ function PhaseSelector<T extends string>({
   );
 }
 
-export default function ProjectRow({ project, isAdmin, onUpdate, onDelete, onAddComment, onDismiss }: Props) {
+export default function ProjectRow({ project, isAdmin, onUpdate, onDelete, onAddComment, onEditComment, onDeleteComment, onDismiss }: Props) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const myRole: 'admin' | 'viewer' = isAdmin ? 'admin' : 'viewer';
 
   const [locationName, setLocationName] = useState(project.location_name);
   const [address, setAddress] = useState(project.address);
@@ -211,6 +217,28 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete, onAdd
     } finally {
       setPostingComment(false);
     }
+  }
+
+  function startEditComment(c: ProjectComment) {
+    setEditingCommentId(c.id);
+    setEditingCommentText(c.text);
+  }
+
+  function cancelEditComment() {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  }
+
+  async function saveEditComment(commentId: string) {
+    const text = editingCommentText.trim();
+    if (!text) return;
+    await onEditComment(project.id, commentId, text);
+    cancelEditComment();
+  }
+
+  async function deleteComment(commentId: string) {
+    if (!confirm('Delete this comment? This cannot be undone.')) return;
+    await onDeleteComment(project.id, commentId);
   }
 
   async function saveDetails() {
@@ -499,17 +527,44 @@ export default function ProjectRow({ project, isAdmin, onUpdate, onDelete, onAdd
                   <p className="text-xs text-steel-600 italic mb-3">No comments yet.</p>
                 ) : (
                   <div className="space-y-3 mb-3">
-                    {comments.map(c => (
-                      <div key={c.id} className="text-sm">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${c.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-steel-700 text-steel-300'}`}>
-                            {c.role === 'admin' ? 'Admin' : 'Viewer'}
-                          </span>
-                          <span className="text-xs text-steel-600 font-mono">{formatCommentDate(c.created_at)}</span>
+                    {comments.map(c => {
+                      const mine = c.role === myRole;
+                      const isEditing = editingCommentId === c.id;
+                      return (
+                        <div key={c.id} className="text-sm group/comment">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${c.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-steel-700 text-steel-300'}`}>
+                              {c.role === 'admin' ? 'Admin' : 'Viewer'}
+                            </span>
+                            <span className="text-xs text-steel-600 font-mono">{formatCommentDate(c.created_at)}</span>
+                            {c.edited_at && <span className="text-[10px] text-steel-600 italic">edited</span>}
+                            {mine && !isEditing && (
+                              <span className="ml-auto flex items-center gap-2 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                <button onClick={() => startEditComment(c)} className="text-[10px] text-steel-500 hover:text-amber-400 underline underline-offset-2">edit</button>
+                                <button onClick={() => deleteComment(c.id)} className="text-[10px] text-steel-500 hover:text-red-400 underline underline-offset-2">delete</button>
+                              </span>
+                            )}
+                          </div>
+                          {isEditing ? (
+                            <div className="pl-0.5">
+                              <textarea
+                                className="input-field resize-none text-sm"
+                                rows={2}
+                                value={editingCommentText}
+                                onChange={e => setEditingCommentText(e.target.value)}
+                                autoFocus
+                              />
+                              <div className="flex gap-2 mt-1.5">
+                                <button onClick={() => saveEditComment(c.id)} disabled={!editingCommentText.trim()} className="btn-primary text-xs py-1 px-3 disabled:opacity-40">Save</button>
+                                <button onClick={cancelEditComment} className="btn-secondary text-xs py-1 px-3">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-steel-200 whitespace-pre-wrap leading-relaxed pl-0.5">{c.text}</p>
+                          )}
                         </div>
-                        <p className="text-steel-200 whitespace-pre-wrap leading-relaxed pl-0.5">{c.text}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 <div className="flex gap-2 items-end">

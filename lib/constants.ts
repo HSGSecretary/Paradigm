@@ -26,6 +26,7 @@ export interface ProjectComment {
   role: 'admin' | 'viewer';
   text: string;
   created_at: string;
+  edited_at?: string;
 }
 
 export interface Project {

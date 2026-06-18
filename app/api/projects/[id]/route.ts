@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { ensureSchema } from '@/lib/schema';
 import { getSession } from '@/lib/auth';
 
 export async function PATCH(
@@ -11,6 +12,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  await ensureSchema();
   const body = await req.json();
   const {
     location_name, address, project_status, project_phase_dates,

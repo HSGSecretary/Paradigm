@@ -22,7 +22,13 @@ export default function DashboardClient({ role }: Props) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  useEffect(() => {
+    fetchProjects();
+    // Light polling so updates and comments from the other side show up
+    // without a manual refresh.
+    const t = setInterval(fetchProjects, 30000);
+    return () => clearInterval(t);
+  }, [fetchProjects]);
 
   async function handleLogout() {
     await fetch('/api/auth', { method: 'DELETE' });
@@ -69,6 +75,37 @@ export default function DashboardClient({ role }: Props) {
     if (res.ok) {
       const updated = await res.json();
       setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Could not post comment.');
+    }
+  }
+
+  async function handleEditComment(id: number, commentId: string, text: string) {
+    const res = await fetch(`/api/projects/${id}/comments`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commentId, text }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Could not edit comment.');
+    }
+  }
+
+  async function handleDeleteComment(id: number, commentId: string) {
+    const res = await fetch(`/api/projects/${id}/comments?commentId=${encodeURIComponent(commentId)}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Could not delete comment.');
     }
   }
 
@@ -202,6 +239,8 @@ export default function DashboardClient({ role }: Props) {
                     onUpdate={handleUpdate}
                     onDelete={handleDelete}
                     onAddComment={handleAddComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
                     onDismiss={handleDismiss}
                   />
                 </div>
